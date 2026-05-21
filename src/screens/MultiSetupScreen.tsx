@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +13,8 @@ interface Props {
   onStart: (players: string[]) => void;
   onBack: () => void;
 }
+
+const PLAYER_COLORS = ['#E53935', '#1E88E5', '#43A047', '#FDD835', '#AB47BC', '#FF7043'];
 
 export function MultiSetupScreen({ onStart, onBack }: Props) {
   const [count, setCount] = useState(3);
@@ -40,144 +43,240 @@ export function MultiSetupScreen({ onStart, onBack }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      <Pressable onPress={onBack} style={styles.backBtn}>
-        <Text style={styles.backText}>← Volver</Text>
-      </Pressable>
-
-      <Text style={styles.title}>Multijugador</Text>
-      <Text style={styles.subtitle}>¿Cuántos jugáis?</Text>
-
-      <View style={styles.counterRow}>
-        <Pressable
-          style={[styles.counterBtn, count <= MIN_PLAYERS && styles.counterBtnDisabled]}
-          onPress={() => setPlayerCount(count - 1)}
-          disabled={count <= MIN_PLAYERS}
-        >
-          <Text style={styles.counterBtnText}>−</Text>
+    <View style={styles.root}>
+      {/* top bar */}
+      <View style={styles.topBar}>
+        <Pressable onPress={onBack} style={styles.backBtn}>
+          <Text style={styles.backText}>← Volver</Text>
         </Pressable>
-        <Text style={styles.count}>{count}</Text>
-        <Pressable
-          style={[styles.counterBtn, count >= MAX_PLAYERS && styles.counterBtnDisabled]}
-          onPress={() => setPlayerCount(count + 1)}
-          disabled={count >= MAX_PLAYERS}
-        >
-          <Text style={styles.counterBtnText}>+</Text>
-        </Pressable>
+        <Text style={styles.topTitle}>Multijugador</Text>
+        <View style={styles.backBtn} />
       </View>
 
-      <Text style={styles.namesTitle}>Nombres (opcional)</Text>
-      <View style={styles.namesList}>
-        {names.map((name, i) => (
-          <TextInput
-            key={i}
-            style={styles.nameInput}
-            value={name}
-            onChangeText={(text) => updateName(i, text)}
-            placeholder={`Jugador ${i + 1}`}
-            placeholderTextColor="#666"
-            maxLength={16}
-          />
-        ))}
-      </View>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* counter */}
+        <View style={styles.counterCard}>
+          <Text style={styles.counterLabel}>¿Cuántos jugáis?</Text>
+          <View style={styles.counterRow}>
+            <Pressable
+              style={[styles.counterBtn, count <= MIN_PLAYERS && styles.counterBtnOff]}
+              onPress={() => setPlayerCount(count - 1)}
+              disabled={count <= MIN_PLAYERS}
+            >
+              <Text style={styles.counterBtnText}>−</Text>
+            </Pressable>
+            <Text style={styles.countNumber}>{count}</Text>
+            <Pressable
+              style={[styles.counterBtn, count >= MAX_PLAYERS && styles.counterBtnOff]}
+              onPress={() => setPlayerCount(count + 1)}
+              disabled={count >= MAX_PLAYERS}
+            >
+              <Text style={styles.counterBtnText}>+</Text>
+            </Pressable>
+          </View>
+          {/* player dots preview */}
+          <View style={styles.dotsRow}>
+            {Array.from({ length: MAX_PLAYERS }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  i < count
+                    ? { backgroundColor: PLAYER_COLORS[i] }
+                    : styles.dotOff,
+                ]}
+              />
+            ))}
+          </View>
+        </View>
 
-      <Pressable style={styles.startBtn} onPress={handleStart}>
-        <Text style={styles.startBtnText}>Empezar partida</Text>
-      </Pressable>
+        {/* names */}
+        <Text style={styles.namesLabel}>Nombres (opcional)</Text>
+        <View style={styles.namesList}>
+          {names.map((name, i) => (
+            <View key={i} style={styles.nameRow}>
+              <View style={[styles.nameColor, { backgroundColor: PLAYER_COLORS[i] }]} />
+              <TextInput
+                style={styles.nameInput}
+                value={name}
+                onChangeText={(text) => updateName(i, text)}
+                placeholder={`Jugador ${i + 1}`}
+                placeholderTextColor="#444"
+                maxLength={16}
+                returnKeyType="next"
+              />
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      <View style={styles.bottomBar}>
+        <Pressable style={styles.startBtn} onPress={handleStart}>
+          <Text style={styles.startBtnText}>Empezar  →</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 8,
   },
-  backBtn: {
-    alignSelf: 'flex-start',
+
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
     paddingVertical: 8,
   },
+  backBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    minWidth: 70,
+  },
   backText: {
-    color: '#888',
-    fontSize: 16,
+    color: '#666',
+    fontSize: 15,
     fontWeight: '600',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '900',
+  topTitle: {
+    fontSize: 18,
+    fontWeight: '800',
     color: '#fff',
-    marginTop: 8,
   },
-  subtitle: {
-    fontSize: 16,
+
+  scroll: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 20,
+    gap: 20,
+  },
+
+  /* counter */
+  counterCard: {
+    backgroundColor: '#13132a',
+    borderRadius: 22,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1E88E5' + '55',
+    gap: 16,
+  },
+  counterLabel: {
+    fontSize: 15,
     color: '#888',
-    marginTop: 4,
-    marginBottom: 20,
+    fontWeight: '600',
   },
   counterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 24,
-    marginBottom: 28,
+    gap: 28,
   },
   counterBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: '#1E88E5',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  counterBtnDisabled: {
-    backgroundColor: '#333',
-    opacity: 0.5,
+  counterBtnOff: {
+    backgroundColor: '#222',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   counterBtnText: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700',
     color: '#fff',
+    lineHeight: 30,
   },
-  count: {
-    fontSize: 48,
+  countNumber: {
+    fontSize: 56,
     fontWeight: '900',
     color: '#fff',
-    minWidth: 60,
+    minWidth: 64,
     textAlign: 'center',
   },
-  namesTitle: {
-    fontSize: 14,
+  dotsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  dotOff: {
+    backgroundColor: '#222',
+  },
+
+  /* names */
+  namesLabel: {
+    fontSize: 12,
     fontWeight: '700',
-    color: '#666',
-    marginBottom: 10,
+    color: '#444',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
   },
   namesList: {
     gap: 10,
-    flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  nameColor: {
+    width: 6,
+    height: 42,
+    borderRadius: 3,
   },
   nameInput: {
-    backgroundColor: '#252540',
-    borderRadius: 12,
+    flex: 1,
+    backgroundColor: '#13132a',
+    borderRadius: 14,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 17,
+    paddingVertical: 12,
+    fontSize: 16,
     color: '#fff',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: '#252545',
+  },
+
+  /* bottom */
+  bottomBar: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 8,
   },
   startBtn: {
     backgroundColor: '#43A047',
-    borderRadius: 16,
+    borderRadius: 18,
     paddingVertical: 18,
     alignItems: 'center',
-    marginVertical: 20,
+    shadowColor: '#43A047',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
   startBtnText: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#fff',
+    letterSpacing: 1,
   },
 });

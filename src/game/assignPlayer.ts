@@ -8,45 +8,67 @@ function isNumberValue(value: CardValue): boolean {
   return value >= '0' && value <= '9';
 }
 
+function isActionValue(value: CardValue): boolean {
+  return value === 'skip' || value === 'reverse' || value === 'draw2';
+}
+
 function playerFromIndex(config: GameConfig, index: number): string {
   return config.players[index % config.players.length];
 }
 
-/** 1v1 estricto: siempre uno u otro, sin "los dos" ni "elige". */
+/**
+ * En UNO las cartas de acción (Salta, Reversa, +2) las juegas TÚ
+ * sobre tu RIVAL — así que el rival es el afectado.
+ * El color del dueño nos dice quién "juega" la carta;
+ * las acciones siempre van al jugador contrario a ese color.
+ */
+
+// ─── 1 vs 1 TRADICIONAL ───────────────────────────────────────────────────────
+
 function assignDuel(config: GameConfig, card: UnoCard): CardAssignment {
   const [p1, p2] = config.players;
 
   if (card.color === 'wild') {
+    // Comodín: lo juega p1; +4: lo juega p1 sobre p2 → p2 flexiona
     const player = card.value === 'wild4' ? p2 : p1;
     return { hint: player, playerName: player };
   }
 
-  const colorMap: Record<CardColor, string> = {
-    red: p1,
-    blue: p2,
-    green: p1,
+  // Quién "posee" este color (quien jugaría la carta)
+  const colorOwner: Record<CardColor, string> = {
+    red:    p1,
+    blue:   p2,
+    green:  p1,
     yellow: p2,
-    wild: p1,
+    wild:   p1,
   };
+  const owner    = colorOwner[card.color];
+  const opponent = owner === p1 ? p2 : p1;
 
-  const player = colorMap[card.color];
-  return { hint: player, playerName: player };
+  if (isActionValue(card.value)) {
+    // La acción va al rival del dueño del color
+    return { hint: opponent, playerName: opponent };
+  }
+
+  // Números → flexiona el dueño del color
+  return { hint: owner, playerName: owner };
 }
 
-/** 2 jugadores con reglas variadas: los dos, elige, comodín, etc. */
+// ─── VARIEDAD (2 jugadores) ───────────────────────────────────────────────────
+
 function assignVariety(config: GameConfig, card: UnoCard): CardAssignment {
   const [p1, p2] = config.players;
 
   if (card.color === 'wild') {
     return {
-      hint: 'Elige color → elige quién flexiona (o lo que queráis)',
+      hint: 'Elige color → elige quién flexiona',
       playerName: null,
     };
   }
 
   if (card.color === 'green') {
     return {
-      hint: '¡Los dos! 5 flexiones cada uno (o lo que acordéis)',
+      hint: '¡Los dos! Las flexiones que acordéis',
       playerName: null,
     };
   }
@@ -58,24 +80,31 @@ function assignVariety(config: GameConfig, card: UnoCard): CardAssignment {
     };
   }
 
+  // Dueño del color en rojo/azul
+  const owner    = card.color === 'red' ? p1 : p2;
+  const opponent = owner === p1 ? p2 : p1;
+
   if (card.value === 'skip') {
+    // El dueño cancela al rival → el rival (saltado) flexiona
     return {
-      hint: `${p2} se salta · ${p1} hace las flexiones`,
-      playerName: p1,
+      hint: `¡${owner} cancela a ${opponent}! → ${opponent} flexiona`,
+      playerName: opponent,
     };
   }
 
   if (card.value === 'reverse') {
+    // El dueño cambia el sentido: le toca de nuevo → el rival flexiona
     return {
-      hint: 'Cambio de turno · elige quién flexiona',
-      playerName: null,
+      hint: `¡${owner} cambia el sentido! → ${opponent} flexiona`,
+      playerName: opponent,
     };
   }
 
   if (card.value === 'draw2') {
+    // El dueño da +2 al rival → el rival flexiona (2 extra)
     return {
-      hint: `${p2} hace el doble de flexiones`,
-      playerName: p2,
+      hint: `¡${owner} da +2 a ${opponent}! → ${opponent} hace 2 flexiones`,
+      playerName: opponent,
     };
   }
 
@@ -83,14 +112,15 @@ function assignVariety(config: GameConfig, card: UnoCard): CardAssignment {
     const num = parseInt(card.value, 10);
     const player = num % 2 === 0 ? p1 : p2;
     return {
-      hint: `${player} hace ${num} flexiones`,
+      hint: `${player} hace ${num === 0 ? '10' : String(num)} flexiones`,
       playerName: player,
     };
   }
 
-  const player = card.color === 'red' ? p1 : p2;
-  return { hint: `${player} hace las flexiones`, playerName: player };
+  return { hint: `${owner} hace las flexiones`, playerName: owner };
 }
+
+// ─── MULTIJUGADOR ─────────────────────────────────────────────────────────────
 
 function assignMulti(config: GameConfig, card: UnoCard): CardAssignment {
   const count = config.players.length;
@@ -102,23 +132,36 @@ function assignMulti(config: GameConfig, card: UnoCard): CardAssignment {
     };
   }
 
-  if (card.color === 'yellow' && count <= 4) {
-    const p = config.players[3];
-    if (p) {
-      return { hint: `${p} hace las flexiones`, playerName: p };
-    }
+  const colorIndex = COLOR_ORDER.indexOf(card.color);
+
+  if (isActionValue(card.value)) {
+    // Acción → jugador SIGUIENTE al del color (el que es "atacado")
+    const targetIndex = (colorIndex + 1) % count;
+    const target = playerFromIndex(config, targetIndex);
+
+    const actionLabel: Record<CardValue, string> = {
+      skip:    `¡Salta! → ${target} flexiona`,
+      reverse: `¡Reversa! → ${target} flexiona`,
+      draw2:   `¡+2! → ${target} hace 2 flexiones`,
+      wild: '', wild4: '', '0': '', '1': '', '2': '', '3': '',
+      '4': '', '5': '', '6': '', '7': '', '8': '', '9': '',
+    };
+
+    return {
+      hint: actionLabel[card.value] || `${target} flexiona`,
+      playerName: target,
+    };
   }
 
   if (count > 4 && isNumberValue(card.value)) {
     const num = parseInt(card.value, 10);
     const player = playerFromIndex(config, num % count);
     return {
-      hint: `${player} hace las flexiones (${num})`,
+      hint: `${player} hace las flexiones`,
       playerName: player,
     };
   }
 
-  const colorIndex = COLOR_ORDER.indexOf(card.color);
   if (colorIndex >= 0 && colorIndex < count) {
     const player = config.players[colorIndex];
     return { hint: `${player} hace las flexiones`, playerName: player };
@@ -130,6 +173,8 @@ function assignMulti(config: GameConfig, card: UnoCard): CardAssignment {
   };
 }
 
+// ─── EXPORTS ──────────────────────────────────────────────────────────────────
+
 export interface CardAssignment {
   hint: string;
   playerName: string | null;
@@ -137,12 +182,9 @@ export interface CardAssignment {
 
 export function assignCard(config: GameConfig, card: UnoCard): CardAssignment {
   switch (config.mode) {
-    case 'duel':
-      return assignDuel(config, card);
-    case 'variety':
-      return assignVariety(config, card);
-    case 'multi':
-      return assignMulti(config, card);
+    case 'duel':    return assignDuel(config, card);
+    case 'variety': return assignVariety(config, card);
+    case 'multi':   return assignMulti(config, card);
   }
 }
 
@@ -151,21 +193,23 @@ export function getLegendItems(config: GameConfig): { color: string; label: stri
 
   if (config.mode === 'duel') {
     return [
-      { color: PALETTE[0], label: `Rojo = ${p1}` },
-      { color: PALETTE[1], label: `Azul = ${p2}` },
-      { color: PALETTE[2], label: `Verde = ${p1}` },
-      { color: PALETTE[3], label: `Amarillo = ${p2}` },
-      { color: '#212121', label: `Comodín = ${p1} · +4 = ${p2}` },
+      { color: PALETTE[0], label: `Rojo núm. = ${p1}` },
+      { color: PALETTE[1], label: `Azul núm. = ${p2}` },
+      { color: PALETTE[2], label: `Verde núm. = ${p1}` },
+      { color: PALETTE[3], label: `Amarillo núm. = ${p2}` },
+      { color: '#888',     label: 'Acción → rival del color' },
+      { color: '#212121',  label: `Comodín = ${p1} · +4 = ${p2}` },
     ];
   }
 
   if (config.mode === 'variety') {
     return [
-      { color: PALETTE[0], label: `Rojo = ${p1}` },
-      { color: PALETTE[1], label: `Azul = ${p2}` },
+      { color: PALETTE[0], label: `Rojo núm. = ${p1}` },
+      { color: PALETTE[1], label: `Azul núm. = ${p2}` },
       { color: PALETTE[2], label: 'Verde = los dos' },
       { color: PALETTE[3], label: 'Amarillo = elige' },
-      { color: '#212121', label: 'Comodín = lo que queráis' },
+      { color: '#888',     label: 'Acción → rival del color' },
+      { color: '#212121',  label: 'Comodín = elige' },
     ];
   }
 
@@ -178,14 +222,10 @@ export function getLegendItems(config: GameConfig): { color: string; label: stri
       });
     }
   });
-
   if (config.players.length > 4) {
-    items.push({
-      color: '#888',
-      label: `Números reparten entre ${config.players.length} jugadores`,
-    });
+    items.push({ color: '#888', label: `Números reparten entre ${config.players.length}` });
   }
-
+  items.push({ color: '#888',    label: 'Acción → siguiente jugador' });
   items.push({ color: '#212121', label: 'Comodín = elige' });
   return items;
 }

@@ -1,71 +1,128 @@
-# UNO Gym
+# UNO Gym 🏋️
 
-App móvil sencilla para sacar **cartas UNO al azar** con un toque. Pensada para el gimnasio: cartas grandes, una mano libre, alternar flexiones con un amigo.
+> Saca una carta UNO al azar, lee quién flexiona, toca de nuevo. Ideal para alternar con un amigo en el gimnasio sin tocar nada más.
 
-## Cómo funciona
+---
 
-1. Abre la app.
-2. **Toca la carta** (o el hueco inicial) → sale una carta aleatoria del mazo completo (108 cartas).
-3. Cuando se agota el mazo, se baraja solo otra vez.
+## Qué es
 
-### Colores → quién hace flexiones (sugerencia)
+**UNO Gym** es una app móvil minimalista para el gimnasio. Nada de puntos ni turnos — solo cartas UNO grandes que aparecen al tocar la pantalla para decidir quién hace las flexiones (o cualquier ejercicio que queráis).
 
-| Color    | Idea rápida              |
-|----------|--------------------------|
-| Rojo     | Tú                       |
-| Azul     | Tu amigo                 |
-| Verde    | Los dos (p. ej. 5 reps)  |
-| Amarillo | Quien sacó la carta elige|
-| Comodín  | Elegís color = elegís quién |
+Mazo oficial: **108 cartas**, se baraja solo al acabarse.
 
-Podéis cambiar las reglas como queráis; la app solo reparte cartas.
+---
 
-## Requisitos
+## Modos de juego
 
-- [Node.js](https://nodejs.org/) (LTS)
-- iPhone con **Expo Go** actualizado ([App Store](https://apps.apple.com/app/expo-go/id982107779))
-- El proyecto usa **Expo SDK 55** (compatible con la Expo Go actual)
+### ⚔️ 1 vs 1 Tradicional
+Solo dos jugadores. Cada carta siempre asigna a uno **u** otro, sin "los dos" ni "elige quién". Máxima claridad.
 
-## Instalación y uso en iPhone
+| Color | Quién flexiona |
+|-------|----------------|
+| 🔴 Rojo | Jugador 1 |
+| 🔵 Azul | Jugador 2 |
+| 🟢 Verde | Jugador 1 |
+| 🟡 Amarillo | Jugador 2 |
+| ⚫ Comodín | J1 · +4 = J2 |
+
+### 🎲 Variedad (2 jugadores)
+Más variado: los dos, elige quién, reglas por carta especial.
+
+| Carta | Regla |
+|-------|-------|
+| Rojo / Azul | Jugador asignado al color |
+| Verde | Los dos |
+| Amarillo | Quien sacó la carta elige |
+| +2 | El otro hace el doble |
+| Salta | El otro se salta, tú flexionas |
+| Comodín | Lo que queráis |
+| Número | Par = J1 · Impar = J2 · Reps = el número |
+
+### 👥 Multijugador
+De **2 a 6 jugadores** con nombres personalizados. Cada color va a un jugador; con más de 4, los números reparten entre todos por módulo.
+
+---
+
+## Instalación
+
+### Requisitos
+- [Node.js LTS](https://nodejs.org/)
+- iPhone con **[Expo Go](https://apps.apple.com/app/expo-go/id982107779)** instalado y actualizado
+- Expo SDK 55
+
+### Pasos
 
 ```bash
-cd "c:\Users\oscar\JUEGO UNO"
+# 1. Instalar dependencias
 npm install
+
+# 2. Arrancar (modo tunnel — funciona sin necesidad de misma Wi‑Fi)
 npm start
-```
 
-`npm start` usa **modo tunnel** para que el iPhone se conecte aunque Windows bloquee la red local.
-
-1. Espera a que aparezca el QR (puede tardar ~30 s la primera vez).
-2. Escanea con la **cámara del iPhone** o desde **Expo Go**.
-3. Toca la carta para sacar la siguiente.
-
-### Si sigue fallando
-
-| Problema | Solución |
-|----------|----------|
-| "Incompatible with Expo Go" | Actualiza Expo Go en el App Store |
-| No conecta / timeout | Usa `npm start` (tunnel). Evita `npm run start:lan` |
-| Puerto ocupado | Cierra otras ventanas de `npm start` y vuelve a lanzar |
-| Firewall Windows | Permite Node.js en redes privadas cuando Windows lo pregunte |
-
-### Modo red local (más rápido, mismo Wi‑Fi)
-
-```bash
+# Alternativa: red local (mismo Wi‑Fi, más rápido)
 npm run start:lan
 ```
 
-PC e iPhone deben estar en la **misma Wi‑Fi**.
+3. Espera a que aparezca el QR en la terminal (~30 s la primera vez).
+4. Escanéalo con la **cámara del iPhone** o desde la app **Expo Go**.
+5. ¡Listo!
+
+---
 
 ## Scripts
 
-| Comando        | Descripción        |
-|----------------|--------------------|
-| `npm start`    | Inicia Expo        |
-| `npm run ios`  | Abre simulador iOS (solo Mac) |
+| Comando | Descripción |
+|---------|-------------|
+| `npm start` | Expo en modo **tunnel** (recomendado para iPhone) |
+| `npm run start:lan` | Expo en red local (más rápido, misma Wi‑Fi) |
+| `npm run ios` | Simulador iOS (solo macOS) |
+| `npm run android` | Simulador Android |
 
-## Estructura
+---
 
-- `App.tsx` — pantalla principal
-- `src/deck.ts` — mazo UNO y baraja
-- `src/components/UnoCardView.tsx` — carta grande táctil
+## Solución de problemas
+
+| Error | Solución |
+|-------|----------|
+| "Incompatible with Expo Go" | Actualiza Expo Go desde el App Store |
+| No conecta / timeout | Usa `npm start` (tunnel). Cierra otras instancias antes. |
+| Puerto ocupado | Cierra terminales con `npm start` previos y relanza |
+| Firewall Windows | Permite Node.js en redes privadas cuando Windows lo pida |
+
+---
+
+## Estructura del proyecto
+
+```
+uno-gym/
+├── App.tsx                          # Raíz: navegación entre pantallas
+├── app.json                         # Config Expo
+├── src/
+│   ├── components/
+│   │   └── UnoCardView.tsx          # Carta grande táctil
+│   ├── game/
+│   │   ├── config.ts                # Tipos y configs de modo
+│   │   └── assignPlayer.ts          # Lógica de asignación por modo
+│   ├── screens/
+│   │   ├── HomeScreen.tsx           # Menú de selección de modo
+│   │   ├── GameScreen.tsx           # Pantalla de juego
+│   │   └── MultiSetupScreen.tsx     # Config multijugador
+│   ├── deck.ts                      # Mazo UNO (108 cartas) + barajado
+│   ├── types.ts                     # Tipos TypeScript
+│   ├── cardLabels.ts                # Textos de colores y valores
+│   └── theme.ts                     # Paleta de colores de cartas
+```
+
+---
+
+## Renombrar en GitHub
+
+El repositorio en GitHub se llama `JUEGO-UNO`. Para renombrarlo a `uno-gym`:
+
+1. Ve a **Settings** del repo en GitHub.
+2. Cambia el nombre a `uno-gym`.
+3. Actualiza el remote local:
+
+```bash
+git remote set-url origin https://github.com/Oscarlbs/uno-gym.git
+```

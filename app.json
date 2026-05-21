@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "UNO Gym",
-    "slug": "juego-uno",
+    "slug": "uno-gym",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
